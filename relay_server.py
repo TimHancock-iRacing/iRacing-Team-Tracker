@@ -6,7 +6,7 @@ import json
 import sqlite3
 import threading
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from flask import Flask, Response, jsonify, render_template_string, request
 
@@ -15,7 +15,7 @@ SESSION_LOCK = threading.RLock()
 DB_PATH = "relay_store.sqlite3"
 SESSION_STORE: Dict[str, Dict[str, Any]] = {}
 
-DASHBOARD_HTML = """
+DASHBOARD_HTML = r"""
 <!doctype html>
 <html>
 <head>
@@ -34,23 +34,30 @@ DASHBOARD_HTML = """
       --warn:#ffb020;
       --bad:#ff5c5c;
       --border:#202a3a;
-      --soft:#171e2c;
     }
     * { box-sizing:border-box; }
     body {
-      margin:0; padding:20px;
-      background:var(--bg); color:var(--text);
+      margin:0;
+      padding:20px;
+      background:var(--bg);
+      color:var(--text);
       font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
     .wrap { max-width: 1500px; margin: 0 auto; }
     .topbar {
-      display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      margin-bottom:18px;
     }
     .title { font-size:22px; font-weight:800; margin:0; }
     .subtitle { color:var(--muted); font-size:13px; margin-top:6px; }
     .status-row { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
     .pill {
-      display:inline-flex; align-items:center; gap:8px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
       border:1px solid var(--border);
       border-radius:999px;
       padding:8px 12px;
@@ -131,7 +138,10 @@ DASHBOARD_HTML = """
     }
     .rows { display:grid; gap:10px; }
     .row {
-      display:flex; justify-content:space-between; align-items:baseline; gap:16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:16px;
       border-bottom:1px solid rgba(255,255,255,0.05);
       padding-bottom:10px;
     }
@@ -165,7 +175,10 @@ DASHBOARD_HTML = """
       padding:12px;
     }
     .context-head, .client-head {
-      display:flex; justify-content:space-between; gap:12px; align-items:center;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
       margin-bottom:6px;
     }
     .mono {
@@ -247,7 +260,6 @@ DASHBOARD_HTML = """
   <div class="grid">
     <div class="card">
       <div class="section-title">Strategy</div>
-
       <div class="kpi-grid">
         <div class="kpi">
           <div class="label">Laps Left In Tank</div>
@@ -427,3 +439,113 @@ DASHBOARD_HTML = """
 </script>
 </body>
 </html>
+"""
+
+def init_db() -> None:
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS latest_state (session_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL, updated_at REAL NOT NULL)")
+    conn.commit()
+    conn.close()
+
+def save_snapshot(session_id: str, payload: Dict[str, Any]) -> None:
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO latest_state (session_id, payload_json, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(session_id) DO UPDATE SET payload_json=excluded.payload_json, updated_at=excluded.updated_at
+        """,
+        (session_id, json.dumps(payload), time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+def get_required_env(name: str, fallback: str = "") -> str:
+    import os
+    return os.environ.get(name, fallback)
+
+def check_write_token(payload: Dict[str, Any]) -> bool:
+    expected = get_required_env("WRITE_TOKEN", "")
+    if not expected:
+        return True
+    actual = request.headers.get("X-Write-Token") or payload.get("write_token", "")
+    return actual == expected
+
+def check_read_token() -> bool:
+    expected = get_required_env("READ_TOKEN", "")
+    if not expected:
+        return True
+    actual = request.args.get("token", "")
+    return actual == expected
+
+@APP.get("/")
+def index() -> Response:
+    return jsonify({"ok": True, "message": "Relay is running", "routes": ["/api/update", "/api/session/<session_id>", "/session/<session_id>"]})
+
+@APP.get("/health")
+def health() -> Response:
+    return jsonify({"ok": True, "server_time": time.time()})
+
+@APP.post("/api/update")
+def api_update() -> Response:
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "Invalid JSON"}), 400
+    if not check_write_token(payload):
+        return jsonify({"ok": False, "error": "Invalid write token"}), 403
+
+    session_id = str(payload.get("session_id", "")).strip()
+    if not session_id:
+        return jsonify({"ok": False, "error": "Missing session_id"}), 400
+
+    payload["timestamp"] = float(payload.get("timestamp") or time.time())
+
+    with SESSION_LOCK:
+      SESSION_STORE[session_id] = {"state": payload}
+      save_snapshot(session_id, payload)
+
+    return jsonify({"ok": True, "session_id": session_id})
+
+@APP.get("/api/session/<session_id>")
+def api_session(session_id: str) -> Response:
+    if not check_read_token():
+        return jsonify({"ok": False, "error": "Invalid read token"}), 403
+
+    with SESSION_LOCK:
+        payload = SESSION_STORE.get(session_id, {}).get("state")
+
+    if not payload:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT payload_json FROM latest_state WHERE session_id = ?", (session_id,))
+        row = cur.fetchone()
+        conn.close()
+        if row:
+            payload = json.loads(row[0])
+
+    if not payload:
+        return jsonify({"ok": False, "error": "Session not found"}), 404
+
+    return jsonify(payload)
+
+@APP.get("/session/<session_id>")
+def session_dashboard(session_id: str) -> str:
+    return render_template_string(DASHBOARD_HTML)
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--db", default="relay_store.sqlite3")
+    args = parser.parse_args()
+
+    global DB_PATH
+    DB_PATH = args.db
+    init_db()
+    APP.run(host=args.host, port=args.port, debug=False, use_reloader=False)
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
