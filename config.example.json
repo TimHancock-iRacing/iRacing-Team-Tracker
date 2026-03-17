@@ -30,14 +30,7 @@
     "four_tyre_service_s": 24.0
   },
   "session_csv": {
-    "path": "sample_session.csv"
-  },
-  "mock": {
-    "driver_name": "Tim Hancock",
-    "start_lap": 4,
-    "start_fuel_l": 96.0,
-    "burn_lpl": 2.6,
-    "stint_laps": 0,
-    "pit_every_laps": 28
+    "path": "samples/0084229273_2026-03-14 21h15 UTC_porsche992rgt3-Race_RACE@bathurst.csv",
+    "loop": false
   }
 }

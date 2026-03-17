@@ -1,6 +1,6 @@
 {
   "session_id": "osr-b12-2026",
-  "timestamp": 1773747508.9530444,
+  "timestamp": 1773749520.5388513,
   "publisher": {
     "client_id": "tim-pc",
     "client_label": "Tim Main PC",
@@ -9,65 +9,66 @@
     "active_source": true
   },
   "race": {
-    "lap": 11,
-    "laps_total_est": 291,
+    "lap": 30,
     "green_flag_lap": 4,
-    "laptime_s": 122.771,
-    "track_temp_c": 19.4
+    "laptime_s": 124.712,
+    "track_temp_c": 19.4,
+    "time_remaining_s": 39919.0
   },
   "driver": {
     "name": "Tim Hancock",
-    "stint_laps": 10
+    "stint_laps": 27
   },
   "fuel": {
-    "current_l": 67.45,
+    "current_l": 4.37,
     "burn_lpl": 3.303,
     "burn_source": "rolling",
-    "last_lap_burn_l": 3.363,
-    "stint_avg_burn_l": 2.826,
-    "laps_left": 19.51,
+    "last_lap_burn_l": 3.308,
+    "stint_avg_burn_l": 3.195,
+    "laps_left": 0.42,
     "source": "reported",
     "last_fill_added_l": 89.43,
-    "tank_capacity_l": 110.0,
-    "reported_fuel_to_add_l": 1059.5
+    "nominal_tank_capacity_l": 110.0,
+    "effective_tank_capacity_l": 93.801,
+    "max_trusted_fuel_seen_l": 93.801,
+    "reported_fuel_to_add_l": null
   },
   "pit": {
-    "state": "track",
+    "state": "pit",
     "last_stop_lap": 30,
-    "pit_loss_avg_s": 1.63,
-    "pit_marker": ""
+    "pit_loss_avg_s": 1.59,
+    "pit_marker": "PIT"
   },
   "strategy": {
-    "laps_remaining": 339,
-    "stops_required": 10,
-    "next_stop_lap": 30,
-    "full_tank_laps_est": 32,
-    "fuel_next_stop_l": 104.79,
-    "fuel_final_stop_l": 110.0,
+    "limit_type": "time",
+    "current_regime": "caution",
+    "laps_remaining": 320,
+    "stops_required": 12,
+    "next_stop_lap": null,
+    "full_tank_laps_est": 27,
+    "fuel_next_stop_l": 84.3,
+    "fuel_final_stop_l": 93.8,
     "four_tyre_delta_s": 0.0,
     "four_tyres_covered_by_fuel": true,
-    "pit_loss_avg_s": 1.63,
-    "pit_recommendation": "Fuel + 4 tyres",
-    "pit_recommendation_reason": "Take 4 tyres \u2014 covered by fuelling time",
-    "fuel_time_next_stop_s": 38.81,
-    "reported_fuel_to_add_l": 1059.5
+    "pit_loss_avg_s": 1.59,
+    "pit_recommendation": "Fuel only",
+    "pit_recommendation_reason": "Fuel only baseline \u2014 no trusted tyre snapshot",
+    "fuel_time_next_stop_s": 31.22,
+    "reported_fuel_to_add_l": null,
+    "projected_lap_time_s": 124.712,
+    "projected_lap_time_source": "caution_bucket",
+    "projected_laps_remaining": 320.09,
+    "projected_total_laps": 350.09,
+    "initial_projection_laps": 202.66,
+    "highest_projection_laps": 356.01,
+    "projection_delta_from_initial": 147.43
   },
   "tyres": {
-    "LF": {
-      "wear": 82.5,
-      "temp": 80.9
-    },
-    "RF": {
-      "wear": 79.5,
-      "temp": 84.6
-    },
-    "LR": {
-      "wear": 85.5,
-      "temp": 77.0
-    },
-    "RR": {
-      "wear": 83.5,
-      "temp": 78.2
-    }
+    "mode": "no_trusted_data",
+    "snapshot_lap": null,
+    "LF": null,
+    "RF": null,
+    "LR": null,
+    "RR": null
   }
 }
