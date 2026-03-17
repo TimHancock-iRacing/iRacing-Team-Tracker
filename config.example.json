@@ -1,0 +1,32 @@
+{
+  "session_id": "osr-b12-2026",
+  "mode": "mock",
+  "local_state_path": "publisher_state.json",
+  "publish_interval_s": 1.0,
+  "request_timeout_s": 0.75,
+  "relay": {
+    "update_url": "http://127.0.0.1:8000/api/update",
+    "write_token": "change-me-write-token"
+  },
+  "race": {
+    "green_flag_start_lap": 4,
+    "laps_total_est": 291
+  },
+  "fuel": {
+    "fallback_current_fuel_l": 80.0,
+    "fallback_burn_lpl": 2.6,
+    "full_tank_laps_est": 28
+  },
+  "pit": {
+    "pit_loss_avg_s": 65.0,
+    "fuel_fill_rate_lps": 2.7,
+    "four_tyre_service_s": 24.0
+  },
+  "mock": {
+    "driver_name": "Tim Hancock",
+    "start_lap": 4,
+    "start_fuel_l": 96.0,
+    "burn_lpl": 2.6,
+    "stint_laps": 0
+  }
+}

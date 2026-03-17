@@ -1,0 +1,30 @@
+{
+  "session_id": "osr-b12-2026",
+  "timestamp": 1773737643.1949453,
+  "race": {
+    "lap": 151,
+    "laps_total_est": 291,
+    "green_flag_lap": 4
+  },
+  "driver": {
+    "name": "Tim Hancock",
+    "stint_laps": 147
+  },
+  "fuel": {
+    "current_l": 0.0,
+    "burn_lpl": 2.6,
+    "laps_left": 0.0
+  },
+  "pit": {
+    "state": "track",
+    "last_stop_lap": null,
+    "pit_loss_avg_s": 65.0
+  },
+  "strategy": {
+    "laps_remaining": 140,
+    "stops_required": 1,
+    "next_stop_lap": 151,
+    "fuel_to_add_l": 364.0,
+    "four_tyre_delta_s": 0.0
+  }
+}
