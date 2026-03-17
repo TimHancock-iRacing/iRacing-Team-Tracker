@@ -84,6 +84,7 @@ class SessionCsvReplay:
                 "l_per_lap_reported": to_float(row[12]),
                 "tank_l": to_float(row[13]),
                 "avg_l_per_lap_reported": to_float(row[14]),
+                "time_rem_s": parse_time_to_seconds(row[20]),
                 "laps_rem_reported": to_float(row[21]),
                 "fuel_to_add_reported": to_float(row[22]),
                 "pit_marker": (row[23] or "").strip(),
@@ -123,10 +124,26 @@ class Publisher:
         self.last_stop_lap: Optional[int] = None
         self.last_fuel_snapshot_before_stop: Optional[float] = None
         self.last_fill_added_l: Optional[float] = None
+        self.max_trusted_fuel_seen_l: Optional[float] = None
+        self.effective_tank_capacity_l: Optional[float] = None
 
         self.last_lap_number: Optional[int] = None
         self.last_lap_fuel: Optional[float] = None
         self.lap_samples = deque(maxlen=80)
+        self.green_pace_samples = deque(maxlen=20)
+        self.caution_pace_samples = deque(maxlen=20)
+        self.wet_pace_samples = deque(maxlen=20)
+        self.initial_projection_laps: Optional[float] = None
+        self.highest_projection_laps: Optional[float] = None
+
+        self.last_trusted_tyre_snapshot: Dict[str, Any] = {
+            "mode": "no_trusted_data",
+            "snapshot_lap": None,
+            "LF": None,
+            "RF": None,
+            "LR": None,
+            "RR": None,
+        }
 
         self.mock_state = {
             "lap": int(config.get("mock", {}).get("start_lap", 4)),
@@ -135,6 +152,7 @@ class Publisher:
             "pit_every_laps": int(config.get("mock", {}).get("pit_every_laps", 28)),
             "driver_name": config.get("mock", {}).get("driver_name", self.driver_name),
             "stint_laps": int(config.get("mock", {}).get("stint_laps", 0)),
+            "wet_mode": False,
             "tyres": {
                 "LF": {"wear": 96.0, "temp": 84.0},
                 "RF": {"wear": 95.0, "temp": 86.0},
@@ -162,6 +180,13 @@ class Publisher:
         except Exception:
             return False
 
+    def update_effective_tank_capacity(self, fuel_now: Optional[float], trusted_snapshot: bool) -> None:
+        if not trusted_snapshot or fuel_now is None:
+            return
+        if self.max_trusted_fuel_seen_l is None or fuel_now > self.max_trusted_fuel_seen_l:
+            self.max_trusted_fuel_seen_l = round(fuel_now, 3)
+            self.effective_tank_capacity_l = round(self.max_trusted_fuel_seen_l, 3)
+
     def update_pit_tracking(self, lap_now: int, on_pit_road: bool, fuel_now: Optional[float], pit_loss_override: Optional[float] = None) -> None:
         now = time.time()
         if self.last_on_pit_road is None:
@@ -182,11 +207,15 @@ class Publisher:
             if fuel_now is not None and self.last_fuel_snapshot_before_stop is not None:
                 delta = fuel_now - self.last_fuel_snapshot_before_stop
                 self.last_fill_added_l = round(delta, 2) if delta > 0.5 else 0.0
+
+            if fuel_now is not None:
+                self.update_effective_tank_capacity(fuel_now, trusted_snapshot=True)
+
             self.pit_entry_ts = None
 
         self.last_on_pit_road = on_pit_road
 
-    def capture_lap_sample(self, lap_now: int, fuel_now: Optional[float], on_pit_road: bool, reported_burn: Optional[float] = None) -> None:
+    def capture_lap_sample(self, lap_now: int, fuel_now: Optional[float], on_pit_road: bool, reported_burn: Optional[float], lap_time_s: Optional[float], regime_hint: str) -> None:
         if fuel_now is None:
             return
 
@@ -197,20 +226,31 @@ class Publisher:
 
         if lap_now > self.last_lap_number:
             calc_burn = (self.last_lap_fuel - fuel_now) if self.last_lap_fuel is not None else None
-
             burn = reported_burn if reported_burn is not None else calc_burn
             valid = False
             if burn is not None:
                 valid = (not on_pit_road) and 0.5 <= burn <= 6.0
 
-            self.lap_samples.append({
+            sample = {
                 "lap": lap_now,
                 "burn": round(burn, 4) if burn is not None else None,
                 "calc_burn": round(calc_burn, 4) if calc_burn is not None else None,
                 "reported_burn": round(reported_burn, 4) if reported_burn is not None else None,
+                "lap_time_s": lap_time_s,
                 "valid": valid,
+                "regime_hint": regime_hint,
                 "fuel_end": round(fuel_now, 3),
-            })
+            }
+            self.lap_samples.append(sample)
+
+            if lap_time_s is not None:
+                if regime_hint == "caution":
+                    self.caution_pace_samples.append(lap_time_s)
+                elif regime_hint == "wet":
+                    self.wet_pace_samples.append(lap_time_s)
+                elif regime_hint == "green":
+                    self.green_pace_samples.append(lap_time_s)
+
             self.last_lap_number = lap_now
             self.last_lap_fuel = fuel_now
 
@@ -233,12 +273,43 @@ class Publisher:
 
         return fallback, "fallback", None, None
 
-    def tyre_call(self, tyres: Dict[str, Dict[str, float]], fuel_time_s: float) -> tuple[bool, str]:
-        wear_values = [tyres[k]["wear"] for k in tyres if tyres[k].get("wear") is not None]
-        temp_values = [tyres[k]["temp"] for k in tyres if tyres[k].get("temp") is not None]
+    def infer_regime(self, lap_time_s: Optional[float], wet_mode: bool, manual_sc_mode: bool) -> str:
+        if manual_sc_mode:
+            return "caution"
+        if wet_mode:
+            return "wet"
+        if lap_time_s is not None:
+            baseline = (sum(self.green_pace_samples) / len(self.green_pace_samples)) if self.green_pace_samples else None
+            if baseline and lap_time_s > baseline * 1.35:
+                return "caution"
+        return "green"
+
+    def get_projected_lap_time(self, current_regime: str, lap_time_s: Optional[float]) -> tuple[Optional[float], str]:
+        if current_regime == "caution" and self.caution_pace_samples:
+            return round(sum(self.caution_pace_samples) / len(self.caution_pace_samples), 3), "caution_bucket"
+        if current_regime == "wet" and self.wet_pace_samples:
+            return round(sum(self.wet_pace_samples) / len(self.wet_pace_samples), 3), "wet_bucket"
+        if self.green_pace_samples:
+            return round(sum(list(self.green_pace_samples)[-5:]) / min(5, len(self.green_pace_samples)), 3), "green_bucket"
+        if lap_time_s:
+            return round(lap_time_s, 3), "last_lap"
+        return None, "none"
+
+    def tyre_call(self, tyres: Dict[str, Any], fuel_time_s: float) -> tuple[bool, str]:
+        if tyres.get("mode") != "trusted_snapshot":
+            return False, "Fuel only baseline — no trusted tyre snapshot"
+
+        wear_values = []
+        temp_values = []
+        for key in ["LF", "RF", "LR", "RR"]:
+            tyre = tyres.get(key)
+            if tyre and tyre.get("wear") is not None:
+                wear_values.append(tyre["wear"])
+            if tyre and tyre.get("temp") is not None:
+                temp_values.append(tyre["temp"])
+
         four_tyre_service_s = float(self.config["pit"].get("four_tyre_service_s", 24.0))
         covered = fuel_time_s >= four_tyre_service_s
-
         if covered:
             return True, "Take 4 tyres — covered by fuelling time"
 
@@ -246,38 +317,54 @@ class Publisher:
         hottest = max(temp_values) if temp_values else 0.0
 
         if worst_wear <= 70:
-            return True, "Take 4 tyres — wear threshold reached"
+            return True, "Take 4 tyres — trusted wear threshold reached"
         if hottest >= 105:
-            return True, "Take 4 tyres — overheating risk"
+            return True, "Take 4 tyres — trusted temp threshold reached"
         return False, "Fuel only baseline"
 
-    def build_strategy(self, lap_now: int, fuel_now: float, burn_lpl: float, tyres: Dict[str, Dict[str, float]], reported_laps_rem: Optional[float] = None, reported_fuel_to_add: Optional[float] = None) -> Dict[str, Any]:
+    def build_strategy(self, lap_now: int, fuel_now: float, burn_lpl: float, tyres: Dict[str, Any], limit_type: str, lap_time_s: Optional[float], time_rem_s: Optional[float], reported_laps_rem: Optional[float], reported_fuel_to_add: Optional[float], current_regime: str) -> Dict[str, Any]:
         race_cfg = self.config["race"]
         fuel_cfg = self.config["fuel"]
         pit_cfg = self.config["pit"]
 
-        laps_total_est = int(race_cfg.get("laps_total_est", 291))
-        laps_remaining = int(reported_laps_rem) if reported_laps_rem is not None else max(0, laps_total_est - lap_now)
-        tank_capacity_l = float(fuel_cfg.get("tank_capacity_l", 110.0))
+        nominal_tank_capacity_l = float(fuel_cfg.get("nominal_tank_capacity_l", 110.0))
+        effective_tank_capacity_l = float(self.effective_tank_capacity_l or nominal_tank_capacity_l)
         reserve_l = float(fuel_cfg.get("reserve_l", 3.0))
         usable_fuel = max(0.0, fuel_now - reserve_l)
         laps_left = round(usable_fuel / burn_lpl, 2) if burn_lpl > 0 else 0.0
-        full_tank_laps_est = max(1, int(math.floor(max(0.0, tank_capacity_l - reserve_l) / burn_lpl)))
+        full_tank_laps_est = max(1, int(math.floor(max(0.0, effective_tank_capacity_l - reserve_l) / burn_lpl)))
 
+        projected_lap_time_s, projected_lap_time_source = self.get_projected_lap_time(current_regime, lap_time_s)
+        projected_total_laps = None
+        projected_laps_remaining = None
+
+        if limit_type == "time":
+            if time_rem_s is not None and projected_lap_time_s and projected_lap_time_s > 0:
+                projected_laps_remaining = max(0.0, time_rem_s / projected_lap_time_s)
+                projected_total_laps = lap_now + projected_laps_remaining
+        else:
+            projected_laps_remaining = reported_laps_rem if reported_laps_rem is not None else max(0, int(race_cfg.get("laps_total_est", 291)) - lap_now)
+            projected_total_laps = lap_now + projected_laps_remaining
+
+        if projected_total_laps is not None and self.initial_projection_laps is None and lap_now >= int(race_cfg.get("green_flag_start_lap", 4)):
+            self.initial_projection_laps = projected_total_laps
+        if projected_total_laps is not None:
+            if self.highest_projection_laps is None or projected_total_laps > self.highest_projection_laps:
+                self.highest_projection_laps = projected_total_laps
+
+        laps_remaining = int(projected_laps_remaining) if projected_laps_remaining is not None else 0
         additional_laps_needed = max(0.0, laps_remaining - laps_left)
         stops_required = 0 if additional_laps_needed <= 0 else math.ceil(additional_laps_needed / full_tank_laps_est)
-
         next_stop_lap = lap_now + int(laps_left) if laps_left > 2 else None
 
         fuel_next_stop_l = None
         fuel_final_stop_l = None
-
         if stops_required > 0:
             ideal_stint_laps = laps_remaining / (stops_required + 1)
             target_fuel = ideal_stint_laps * burn_lpl + reserve_l
-            fuel_next_stop_l = min(tank_capacity_l, max(0.0, target_fuel))
+            fuel_next_stop_l = min(effective_tank_capacity_l, max(0.0, target_fuel))
             remaining_after_next = max(0.0, laps_remaining - ideal_stint_laps)
-            fuel_final_stop_l = min(tank_capacity_l, max(0.0, remaining_after_next * burn_lpl + reserve_l))
+            fuel_final_stop_l = min(effective_tank_capacity_l, max(0.0, remaining_after_next * burn_lpl + reserve_l))
 
         fuel_fill_rate_lps = float(pit_cfg.get("fuel_fill_rate_lps", 2.7))
         four_tyre_service_s = float(pit_cfg.get("four_tyre_service_s", 24.0))
@@ -297,6 +384,8 @@ class Publisher:
             pit_recommendation = "Fuel only"
 
         return {
+            "limit_type": limit_type,
+            "current_regime": current_regime,
             "laps_remaining": laps_remaining,
             "stops_required": stops_required,
             "next_stop_lap": next_stop_lap,
@@ -310,6 +399,13 @@ class Publisher:
             "pit_recommendation_reason": recommendation_reason,
             "fuel_time_next_stop_s": round(fuel_time_next_stop, 2) if fuel_next_stop_l else None,
             "reported_fuel_to_add_l": reported_fuel_to_add,
+            "projected_lap_time_s": projected_lap_time_s,
+            "projected_lap_time_source": projected_lap_time_source,
+            "projected_laps_remaining": round(projected_laps_remaining, 2) if projected_laps_remaining is not None else None,
+            "projected_total_laps": round(projected_total_laps, 2) if projected_total_laps is not None else None,
+            "initial_projection_laps": round(self.initial_projection_laps, 2) if self.initial_projection_laps is not None else None,
+            "highest_projection_laps": round(self.highest_projection_laps, 2) if self.highest_projection_laps is not None else None,
+            "projection_delta_from_initial": round(projected_total_laps - self.initial_projection_laps, 2) if projected_total_laps is not None and self.initial_projection_laps is not None else None,
         }
 
     def build_session_csv_state(self) -> TrackerState:
@@ -337,27 +433,27 @@ class Publisher:
                 pit_loss_override = None
 
         self.update_pit_tracking(lap_now, on_pit_road, fuel_now, pit_loss_override=pit_loss_override)
-        self.capture_lap_sample(lap_now, fuel_now, on_pit_road, reported_burn=row["l_per_lap_reported"])
+
+        wet_mode = False
+        manual_sc_mode = pit_marker == "PIT"
+        current_regime = self.infer_regime(row["laptime_s"], wet_mode, manual_sc_mode)
+        self.capture_lap_sample(lap_now, fuel_now, on_pit_road, row["l_per_lap_reported"], row["laptime_s"], current_regime)
         burn_lpl, burn_source, last_lap_burn, stint_avg_burn = self.get_burn_model(row["avg_l_per_lap_reported"])
 
-        # lightweight tyre inference from stint length and track temp since CSV does not provide tyre wear
-        stint = row["stint"] or 0
-        track_temp = row["track_temp_c"] or 19.0
-        base_wear = max(45.0, 100.0 - (stint * 1.55))
-        tyres = {
-            "LF": {"wear": round(base_wear - 2.0, 1), "temp": round(track_temp + 58 + min(14, stint * 0.35), 1)},
-            "RF": {"wear": round(base_wear - 5.0, 1), "temp": round(track_temp + 61 + min(18, stint * 0.42), 1)},
-            "LR": {"wear": round(base_wear + 1.0, 1), "temp": round(track_temp + 55 + min(11, stint * 0.26), 1)},
-            "RR": {"wear": round(base_wear - 1.0, 1), "temp": round(track_temp + 56 + min(12, stint * 0.28), 1)},
-        }
+        # trusted tyres only: no trusted tyre source in this CSV example
+        tyres = dict(self.last_trusted_tyre_snapshot)
 
         strategy = self.build_strategy(
-            lap_now,
-            fuel_now,
-            burn_lpl,
-            tyres,
+            lap_now=lap_now,
+            fuel_now=fuel_now,
+            burn_lpl=burn_lpl,
+            tyres=tyres,
+            limit_type=self.config["race"].get("limit_type", "time"),
+            lap_time_s=row["laptime_s"],
+            time_rem_s=row["time_rem_s"],
             reported_laps_rem=row["laps_rem_reported"],
             reported_fuel_to_add=row["fuel_to_add_reported"],
+            current_regime=current_regime,
         )
 
         laps_left = round(max(0.0, fuel_now - self.config["fuel"].get("reserve_l", 3.0)) / burn_lpl, 2) if burn_lpl > 0 else None
@@ -374,10 +470,10 @@ class Publisher:
             },
             race={
                 "lap": lap_now,
-                "laps_total_est": int(self.config["race"].get("laps_total_est", 291)),
                 "green_flag_lap": int(self.config["race"].get("green_flag_start_lap", 4)),
                 "laptime_s": row["laptime_s"],
                 "track_temp_c": row["track_temp_c"],
+                "time_remaining_s": row["time_rem_s"],
             },
             driver={
                 "name": self.driver_name,
@@ -392,7 +488,9 @@ class Publisher:
                 "laps_left": laps_left,
                 "source": fuel_source,
                 "last_fill_added_l": self.last_fill_added_l,
-                "tank_capacity_l": float(self.config["fuel"].get("tank_capacity_l", 110.0)),
+                "nominal_tank_capacity_l": float(self.config["fuel"].get("nominal_tank_capacity_l", 110.0)),
+                "effective_tank_capacity_l": float(self.effective_tank_capacity_l or self.config["fuel"].get("nominal_tank_capacity_l", 110.0)),
+                "max_trusted_fuel_seen_l": self.max_trusted_fuel_seen_l,
                 "reported_fuel_to_add_l": row["fuel_to_add_reported"],
             },
             pit={
@@ -410,33 +508,48 @@ class Publisher:
         lap_now = self.mock_state["lap"]
         pit_every = self.mock_state["pit_every_laps"]
         is_pit_lap = (lap_now % pit_every == 0)
+        wet_mode = self.mock_state["wet_mode"] = (lap_now >= 40)
 
         if is_pit_lap:
-            self.mock_state["fuel_l"] = float(self.config["fuel"].get("tank_capacity_l", 110.0))
+            self.mock_state["fuel_l"] = float(self.effective_tank_capacity_l or self.config["fuel"].get("nominal_tank_capacity_l", 110.0))
             self.last_stop_lap = lap_now
             self.last_fill_added_l = 78.0
+            self.update_effective_tank_capacity(self.mock_state["fuel_l"], trusted_snapshot=True)
+            # trusted tyres captured only at pit
+            self.last_trusted_tyre_snapshot = {
+                "mode": "trusted_snapshot",
+                "snapshot_lap": lap_now,
+                "LF": {"wear": 78.0, "temp": 92.0},
+                "RF": {"wear": 72.0, "temp": 97.0},
+                "LR": {"wear": 84.0, "temp": 89.0},
+                "RR": {"wear": 82.0, "temp": 90.0},
+            }
             pit_state = "pit"
+            lap_time_s = 150.0
         else:
-            self.mock_state["fuel_l"] = max(0.0, self.mock_state["fuel_l"] - self.mock_state["burn_lpl"])
+            burn = 3.1 if wet_mode else 2.6
+            self.mock_state["fuel_l"] = max(0.0, self.mock_state["fuel_l"] - burn)
             pit_state = "track"
-
-        for key, wear_drop, temp_bias in [
-            ("LF", 0.45, 0.5), ("RF", 0.6, 1.0), ("LR", 0.35, 0.2), ("RR", 0.4, 0.3)
-        ]:
-            tyre = self.mock_state["tyres"][key]
-            if is_pit_lap:
-                tyre["wear"] = 98.0
-                tyre["temp"] = 80.0
-            else:
-                tyre["wear"] = max(45.0, tyre["wear"] - wear_drop)
-                tyre["temp"] = min(112.0, max(72.0, tyre["temp"] + temp_bias))
+            lap_time_s = 155.0 if wet_mode else 122.8
 
         fuel_now = self.mock_state["fuel_l"]
-        self.capture_lap_sample(lap_now, fuel_now, False, reported_burn=None)
+        current_regime = self.infer_regime(lap_time_s, wet_mode, False)
+        self.capture_lap_sample(lap_now, fuel_now, False, None, lap_time_s, current_regime)
         burn_lpl, burn_source, last_lap_burn, stint_avg_burn = self.get_burn_model(None)
 
-        tyres = self.mock_state["tyres"]
-        strategy = self.build_strategy(lap_now, fuel_now, burn_lpl, tyres)
+        strategy = self.build_strategy(
+            lap_now=lap_now,
+            fuel_now=fuel_now,
+            burn_lpl=burn_lpl,
+            tyres=self.last_trusted_tyre_snapshot,
+            limit_type=self.config["race"].get("limit_type", "time"),
+            lap_time_s=lap_time_s,
+            time_rem_s=max(0.0, 43200 - (lap_now * lap_time_s)),
+            reported_laps_rem=None,
+            reported_fuel_to_add=None,
+            current_regime=current_regime,
+        )
+
         laps_left = round(max(0.0, fuel_now - self.config["fuel"].get("reserve_l", 3.0)) / burn_lpl, 2) if burn_lpl > 0 else None
 
         return TrackerState(
@@ -446,13 +559,15 @@ class Publisher:
                 "client_id": self.client_id,
                 "client_label": self.client_label,
                 "driver_name": self.mock_state["driver_name"],
-                "telemetry_status": "live",
+                "telemetry_status": "mock",
                 "active_source": True,
             },
             race={
                 "lap": lap_now,
-                "laps_total_est": int(self.config["race"].get("laps_total_est", 291)),
                 "green_flag_lap": int(self.config["race"].get("green_flag_start_lap", 4)),
+                "laptime_s": lap_time_s,
+                "track_temp_c": 21.0,
+                "time_remaining_s": max(0.0, 43200 - (lap_now * lap_time_s)),
             },
             driver={
                 "name": self.mock_state["driver_name"],
@@ -467,16 +582,22 @@ class Publisher:
                 "laps_left": laps_left,
                 "source": "live",
                 "last_fill_added_l": self.last_fill_added_l,
-                "tank_capacity_l": float(self.config["fuel"].get("tank_capacity_l", 110.0)),
+                "nominal_tank_capacity_l": float(self.config["fuel"].get("nominal_tank_capacity_l", 110.0)),
+                "effective_tank_capacity_l": float(self.effective_tank_capacity_l or self.config["fuel"].get("nominal_tank_capacity_l", 110.0)),
+                "max_trusted_fuel_seen_l": self.max_trusted_fuel_seen_l,
             },
             pit={
                 "state": pit_state,
                 "last_stop_lap": self.last_stop_lap,
                 "pit_loss_avg_s": strategy["pit_loss_avg_s"],
+                "pit_marker": pit_state.upper(),
             },
             strategy=strategy,
-            tyres=tyres,
+            tyres=self.last_trusted_tyre_snapshot,
         )
+
+    def build_iracing_state(self) -> TrackerState:
+        raise RuntimeError("Live iRacing mode is not included in this export pack yet. Use mock or session_csv mode for testing.")
 
     def publish(self, state: TrackerState) -> None:
         payload = asdict(state)
@@ -497,11 +618,12 @@ class Publisher:
                 elif self.mode == "session_csv":
                     state = self.build_session_csv_state()
                 else:
-                    raise RuntimeError("iracing mode not included in this CSV-focused test pack")
+                    state = self.build_iracing_state()
+
                 self.publish(state)
                 self.log(
                     f"Lap {state.race['lap']} | Fuel {state.fuel['current_l']}L | Burn {state.fuel['burn_lpl']} ({state.fuel['burn_source']}) | "
-                    f"Next stop {state.strategy.get('next_stop_lap')} | {state.strategy.get('pit_recommendation')}"
+                    f"Projected total {state.strategy.get('projected_total_laps')} | {state.strategy.get('pit_recommendation')}"
                 )
             except KeyboardInterrupt:
                 raise
