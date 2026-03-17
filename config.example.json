@@ -5,7 +5,7 @@
   "publish_interval_s": 1.0,
   "request_timeout_s": 0.75,
   "relay": {
-    "update_url": "http://127.0.0.1:8000/api/update",
+    "update_url": "https://iracing-team-tracker-production.up.railway.app/api/update",
     "write_token": "change-me-write-token"
   },
   "race": {
