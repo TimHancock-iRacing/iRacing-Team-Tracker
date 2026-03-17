@@ -1,6 +1,6 @@
 {
   "session_id": "osr-b12-2026",
-  "timestamp": 1773746058.8517575,
+  "timestamp": 1773746683.518747,
   "publisher": {
     "client_id": "tim-pc",
     "client_label": "Tim Main PC",
@@ -9,20 +9,24 @@
     "active_source": true
   },
   "race": {
-    "lap": 51,
+    "lap": 30,
     "laps_total_est": 291,
     "green_flag_lap": 4
   },
   "driver": {
     "name": "Tim Hancock",
-    "stint_laps": 48
+    "stint_laps": 27
   },
   "fuel": {
-    "current_l": 50.2,
+    "current_l": 104.8,
     "burn_lpl": 2.6,
-    "laps_left": 18.15,
+    "burn_source": "rolling",
+    "last_lap_burn_l": 2.6,
+    "stint_avg_burn_l": 2.6,
+    "laps_left": 39.15,
     "source": "live",
-    "last_fill_added_l": 80.0
+    "last_fill_added_l": 78.0,
+    "tank_capacity_l": 110.0
   },
   "pit": {
     "state": "track",
@@ -30,14 +34,35 @@
     "pit_loss_avg_s": 65.0
   },
   "strategy": {
-    "laps_remaining": 240,
+    "laps_remaining": 261,
     "stops_required": 6,
     "next_stop_lap": 69,
     "full_tank_laps_est": 41,
-    "fuel_next_stop_l": 109.6,
-    "fuel_final_stop_l": 47.2,
+    "fuel_next_stop_l": 99.94,
+    "fuel_final_stop_l": 110.0,
     "four_tyre_delta_s": 0.0,
     "four_tyres_covered_by_fuel": true,
-    "pit_loss_avg_s": 65.0
+    "pit_loss_avg_s": 65.0,
+    "pit_recommendation": "Fuel + 4 tyres",
+    "pit_recommendation_reason": "Take 4 tyres \u2014 covered by fuelling time",
+    "fuel_time_next_stop_s": 37.02
+  },
+  "tyres": {
+    "LF": {
+      "wear": 97.1,
+      "temp": 81.0
+    },
+    "RF": {
+      "wear": 96.80000000000001,
+      "temp": 82.0
+    },
+    "LR": {
+      "wear": 97.30000000000001,
+      "temp": 80.4
+    },
+    "RR": {
+      "wear": 97.19999999999999,
+      "temp": 80.6
+    }
   }
 }

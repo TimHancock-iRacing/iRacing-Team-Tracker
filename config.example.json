@@ -1,8 +1,8 @@
 {
   "session_id": "osr-b12-2026",
-  "mode": "mock",
+  "mode": "session_csv",
   "local_state_path": "publisher_state.json",
-  "publish_interval_s": 1.0,
+  "publish_interval_s": 0.75,
   "request_timeout_s": 0.75,
   "relay": {
     "update_url": "https://iracing-team-tracker-production.up.railway.app/api/update",
@@ -27,6 +27,9 @@
     "pit_loss_avg_s": 65.0,
     "fuel_fill_rate_lps": 2.7,
     "four_tyre_service_s": 24.0
+  },
+  "session_csv": {
+    "path": "sample_session.csv"
   },
   "mock": {
     "driver_name": "Tim Hancock",
