@@ -8,14 +8,20 @@
     "update_url": "https://iracing-team-tracker-production.up.railway.app/api/update",
     "write_token": "change-me-write-token"
   },
+  "client": {
+    "client_id": "tim-pc",
+    "client_label": "Tim Main PC",
+    "driver_name": "Tim Hancock"
+  },
   "race": {
     "green_flag_start_lap": 4,
     "laps_total_est": 291
   },
   "fuel": {
+    "tank_capacity_l": 110.0,
+    "reserve_l": 3.0,
     "fallback_current_fuel_l": 80.0,
-    "fallback_burn_lpl": 2.6,
-    "full_tank_laps_est": 28
+    "fallback_burn_lpl": 2.6
   },
   "pit": {
     "pit_loss_avg_s": 65.0,
@@ -23,10 +29,9 @@
     "four_tyre_service_s": 24.0
   },
   "mock": {
-    "driver_name": "Tim Hancock",
     "start_lap": 4,
     "start_fuel_l": 96.0,
     "burn_lpl": 2.6,
-    "stint_laps": 0
+    "pit_every_laps": 28
   }
 }
