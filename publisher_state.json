@@ -1,68 +1,73 @@
 {
   "session_id": "osr-b12-2026",
-  "timestamp": 1773746683.518747,
+  "timestamp": 1773747508.9530444,
   "publisher": {
     "client_id": "tim-pc",
     "client_label": "Tim Main PC",
     "driver_name": "Tim Hancock",
-    "telemetry_status": "live",
+    "telemetry_status": "replay_csv",
     "active_source": true
   },
   "race": {
-    "lap": 30,
+    "lap": 11,
     "laps_total_est": 291,
-    "green_flag_lap": 4
+    "green_flag_lap": 4,
+    "laptime_s": 122.771,
+    "track_temp_c": 19.4
   },
   "driver": {
     "name": "Tim Hancock",
-    "stint_laps": 27
+    "stint_laps": 10
   },
   "fuel": {
-    "current_l": 104.8,
-    "burn_lpl": 2.6,
+    "current_l": 67.45,
+    "burn_lpl": 3.303,
     "burn_source": "rolling",
-    "last_lap_burn_l": 2.6,
-    "stint_avg_burn_l": 2.6,
-    "laps_left": 39.15,
-    "source": "live",
-    "last_fill_added_l": 78.0,
-    "tank_capacity_l": 110.0
+    "last_lap_burn_l": 3.363,
+    "stint_avg_burn_l": 2.826,
+    "laps_left": 19.51,
+    "source": "reported",
+    "last_fill_added_l": 89.43,
+    "tank_capacity_l": 110.0,
+    "reported_fuel_to_add_l": 1059.5
   },
   "pit": {
     "state": "track",
-    "last_stop_lap": 28,
-    "pit_loss_avg_s": 65.0
+    "last_stop_lap": 30,
+    "pit_loss_avg_s": 1.63,
+    "pit_marker": ""
   },
   "strategy": {
-    "laps_remaining": 261,
-    "stops_required": 6,
-    "next_stop_lap": 69,
-    "full_tank_laps_est": 41,
-    "fuel_next_stop_l": 99.94,
+    "laps_remaining": 339,
+    "stops_required": 10,
+    "next_stop_lap": 30,
+    "full_tank_laps_est": 32,
+    "fuel_next_stop_l": 104.79,
     "fuel_final_stop_l": 110.0,
     "four_tyre_delta_s": 0.0,
     "four_tyres_covered_by_fuel": true,
-    "pit_loss_avg_s": 65.0,
+    "pit_loss_avg_s": 1.63,
     "pit_recommendation": "Fuel + 4 tyres",
     "pit_recommendation_reason": "Take 4 tyres \u2014 covered by fuelling time",
-    "fuel_time_next_stop_s": 37.02
+    "fuel_time_next_stop_s": 38.81,
+    "reported_fuel_to_add_l": 1059.5
   },
   "tyres": {
     "LF": {
-      "wear": 97.1,
-      "temp": 81.0
+      "wear": 82.5,
+      "temp": 80.9
     },
     "RF": {
-      "wear": 96.80000000000001,
-      "temp": 82.0
+      "wear": 79.5,
+      "temp": 84.6
     },
     "LR": {
-      "wear": 97.30000000000001,
-      "temp": 80.4
+      "wear": 85.5,
+      "temp": 77.0
     },
     "RR": {
-      "wear": 97.19999999999999,
-      "temp": 80.6
+      "wear": 83.5,
+      "temp": 78.2
     }
   }
 }
