@@ -1,26 +1,10 @@
-# iRacing Team Tracker v2
+# Dashboard v3 Pack
 
-This pack adds both requested upgrades:
+Included:
+- relay_server.py — cleaner race-engineer front end using existing API/state
+- DASHBOARD_V3_SPEC.md — layout and information hierarchy spec
 
-1. Strategy v2
-   - tank-cap-aware stop planning
-   - next-stop fuel and final-stop fuel
-   - 4-tyre time delta vs fuel-only
-   - 'tyres covered by fuel' output
-   - fuel source confidence
-
-2. Multi-driver sync
-   - each installed client has its own client_id
-   - relay accepts updates from multiple clients
-   - relay picks the active source automatically
-   - dashboard shows connected clients and active publisher
-
-Files:
-- relay_server_v2.py
-- tracker_publisher_v2.py
-- config.v2.example.json
-- requirements.txt
-- README.md
+This front end keeps the same server-side filenames so it can drop into your existing workflow.
 
 Railway start command:
-python relay_server_v2.py --host 0.0.0.0 --port $PORT
+python relay_server.py --host 0.0.0.0 --port $PORT

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 from __future__ import annotations
 
@@ -22,287 +21,409 @@ DASHBOARD_HTML = """
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>iRacing Team Tracker v2</title>
+  <title>iRacing Team Tracker v3</title>
   <style>
-    :root { --bg:#0f1115; --card:#171a21; --muted:#97a0af; --text:#eef2f7; --accent:#53a7ff; --good:#34c759; --warn:#ff9f0a; --bad:#ff453a; --border:#252a34; }
+    :root {
+      --bg:#0b0f16;
+      --card:#121824;
+      --card-2:#0f1520;
+      --muted:#93a0b5;
+      --text:#eef3fa;
+      --accent:#6aa9ff;
+      --good:#35c76f;
+      --warn:#ffb020;
+      --bad:#ff5c5c;
+      --border:#202a3a;
+      --soft:#171e2c;
+    }
     * { box-sizing:border-box; }
-    body { margin:0; padding:20px; background:var(--bg); color:var(--text); font-family:Inter,system-ui,sans-serif; }
-    .wrap { max-width:1360px; margin:0 auto; }
-    .topbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
-    .pill { display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:999px; padding:8px 12px; background:rgba(255,255,255,0.02); font-size:13px; }
+    body {
+      margin:0; padding:20px;
+      background:var(--bg); color:var(--text);
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap { max-width: 1500px; margin: 0 auto; }
+    .topbar {
+      display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px;
+    }
+    .title { font-size:22px; font-weight:800; margin:0; }
+    .subtitle { color:var(--muted); font-size:13px; margin-top:6px; }
+    .status-row { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    .pill {
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:8px 12px;
+      background:rgba(255,255,255,0.02);
+      font-size:13px;
+      color:var(--text);
+    }
     .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
-    .good { background:var(--good); } .warn { background:var(--warn); } .bad { background:var(--bad); }
-    .grid { display:grid; gap:16px; grid-template-columns:repeat(12,1fr); }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 8px 30px rgba(0,0,0,0.24); }
-    .span-3{grid-column:span 3;} .span-4{grid-column:span 4;} .span-8{grid-column:span 8;} .span-12{grid-column:span 12;}
-    .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; }
-    .value { font-size:30px; font-weight:700; margin-top:8px; }
+    .good { background:var(--good); }
+    .warn { background:var(--warn); }
+    .bad { background:var(--bad); }
+
+    .header-grid {
+      display:grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap:12px;
+      margin-bottom:18px;
+    }
+    .grid {
+      display:grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap:16px;
+    }
+    .subgrid {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:16px;
+      margin-top:16px;
+    }
+    .card {
+      background:linear-gradient(180deg, var(--card), var(--card-2));
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:16px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.22);
+    }
+    .label {
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:0.08em;
+      margin-bottom:8px;
+    }
+    .big {
+      font-size:28px;
+      font-weight:800;
+      line-height:1.05;
+    }
+    .med {
+      font-size:16px;
+      font-weight:700;
+    }
     .small { font-size:12px; color:var(--muted); }
-    .mono { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    table { width:100%; border-collapse:collapse; }
-    th,td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--border); font-size:14px; }
-    th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; }
-    @media(max-width:980px){ .span-3,.span-4,.span-8,.span-12{grid-column:span 12;} }
+    .kpi-grid {
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:12px;
+      margin-top:12px;
+    }
+    .kpi {
+      background:rgba(255,255,255,0.02);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+    }
+    .kpi .value {
+      font-size:24px;
+      font-weight:800;
+      margin-top:4px;
+    }
+    .section-title {
+      font-size:14px;
+      font-weight:800;
+      color:var(--text);
+      margin-bottom:12px;
+      text-transform:uppercase;
+      letter-spacing:0.06em;
+    }
+    .rows { display:grid; gap:10px; }
+    .row {
+      display:flex; justify-content:space-between; align-items:baseline; gap:16px;
+      border-bottom:1px solid rgba(255,255,255,0.05);
+      padding-bottom:10px;
+    }
+    .row:last-child { border-bottom:none; padding-bottom:0; }
+    .row .name { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0.06em; }
+    .row .value { font-size:20px; font-weight:750; }
+    .map-placeholder {
+      min-height:280px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .placeholder-box {
+      flex:1;
+      border:1px dashed rgba(106,169,255,0.35);
+      background:rgba(106,169,255,0.04);
+      border-radius:16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--muted);
+      text-align:center;
+      padding:20px;
+    }
+    .context-list, .client-list { display:grid; gap:10px; }
+    .context-item, .client-item {
+      border:1px solid var(--border);
+      background:rgba(255,255,255,0.02);
+      border-radius:14px;
+      padding:12px;
+    }
+    .context-head, .client-head {
+      display:flex; justify-content:space-between; gap:12px; align-items:center;
+      margin-bottom:6px;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    details { margin-top:16px; }
+    summary {
+      cursor:pointer;
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:0.08em;
+    }
+    pre {
+      white-space:pre-wrap;
+      font-size:12px;
+      margin-top:12px;
+      color:#d9e4f5;
+      background:#0b111a;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      overflow:auto;
+    }
+    @media (max-width: 1100px) {
+      .header-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid { grid-template-columns: 1fr; }
+      .subgrid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <div><h1 id="title">iRacing Team Tracker v2</h1><div class="small">Multi-driver sync + strategy engine</div></div>
-      <div class="pill"><span class="dot good" id="statusDot"></span><span id="statusText">Waiting</span></div>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1 class="title" id="title">iRacing Team Tracker</h1>
+      <div class="subtitle">Race engineer view — strategy first, context second</div>
     </div>
-    <div class="grid">
-      <div class="card span-3"><div class="label">Current Driver</div><div class="value" id="driverName">-</div><div class="small" id="driverMeta"></div></div>
-      <div class="card span-3"><div class="label">Current Lap</div><div class="value" id="raceLap">-</div><div class="small" id="raceMeta"></div></div>
-      <div class="card span-3"><div class="label">Fuel</div><div class="value" id="fuelNow">-</div><div class="small" id="fuelMeta"></div></div>
-      <div class="card span-3"><div class="label">Next Stop</div><div class="value" id="nextStop">-</div><div class="small" id="stopMeta"></div></div>
-
-      <div class="card span-8">
-        <div class="label" style="margin-bottom:12px;">Strategy</div>
-        <table><tbody>
-          <tr><th>Session ID</th><td class="mono" id="sessionIdCell">-</td></tr>
-          <tr><th>Publisher client</th><td id="publisherClient">-</td></tr>
-          <tr><th>Publisher driver</th><td id="publisherDriver">-</td></tr>
-          <tr><th>Fuel source</th><td id="fuelSource">-</td></tr>
-          <tr><th>Laps remaining</th><td id="lapsRemaining">-</td></tr>
-          <tr><th>Stops required</th><td id="stopsRequired">-</td></tr>
-          <tr><th>Current tank range</th><td id="tankRange">-</td></tr>
-          <tr><th>Fuel next stop</th><td id="fuelNextStop">-</td></tr>
-          <tr><th>Fuel final stop</th><td id="fuelFinalStop">-</td></tr>
-          <tr><th>4-tyre delta</th><td id="fourTyreDelta">-</td></tr>
-          <tr><th>Tyres covered by fuel?</th><td id="tyresCovered">-</td></tr>
-          <tr><th>Pit loss average</th><td id="pitLossAvg">-</td></tr>
-        </tbody></table>
-      </div>
-
-      <div class="card span-4"><div class="label" style="margin-bottom:12px;">Connected Clients</div><div id="clients"></div></div>
-      <div class="card span-12"><div class="label" style="margin-bottom:12px;">Raw State</div><pre id="raw" class="mono" style="white-space:pre-wrap; font-size:12px; margin:0;"></pre></div>
+    <div class="status-row">
+      <div class="pill"><span class="dot good" id="statusDot"></span><span id="statusText">Waiting</span></div>
+      <div class="pill">Fuel source: <strong id="fuelSourcePill">-</strong></div>
+      <div class="pill">Publisher: <strong id="publisherPill">-</strong></div>
     </div>
   </div>
 
-  <script>
-    async function refresh() {
-      const parts = window.location.pathname.split("/");
-      const sessionId = decodeURIComponent(parts[parts.length - 1]);
-      const readToken = new URLSearchParams(window.location.search).get("token") || "";
-      try {
-        const res = await fetch(`/api/session/${encodeURIComponent(sessionId)}?token=${encodeURIComponent(readToken)}`);
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-        const age = data.timestamp ? (Date.now()/1000 - data.timestamp) : 9999;
-        const live = age < 5;
-        document.getElementById("statusDot").className = "dot " + (live ? "good" : "warn");
-        document.getElementById("statusText").textContent = live ? "Live" : `Stale (${age.toFixed(1)}s)`;
-        document.getElementById("title").textContent = `${data.session_id || "Session"} dashboard`;
-        document.getElementById("sessionIdCell").textContent = data.session_id || "-";
-        document.getElementById("driverName").textContent = data.driver?.name || "-";
-        document.getElementById("driverMeta").textContent = `Stint laps: ${data.driver?.stint_laps ?? "-"} | Source: ${data.publisher?.client_id || "-"}`;
-        document.getElementById("raceLap").textContent = data.race?.lap ?? "-";
-        document.getElementById("raceMeta").textContent = `Green flag: ${data.race?.green_flag_lap ?? "-"} | Total est: ${data.race?.laps_total_est ?? "-"}`;
-        document.getElementById("fuelNow").textContent = data.fuel?.current_l == null ? "-" : `${Number(data.fuel.current_l).toFixed(1)} L`;
-        document.getElementById("fuelMeta").textContent = `Burn ${data.fuel?.burn_lpl ?? "-"} L/lap | ${data.fuel?.laps_left ?? "-"} laps left`;
-        document.getElementById("nextStop").textContent = data.strategy?.next_stop_lap ?? "-";
-        document.getElementById("stopMeta").textContent = `Base: fuel only | last update ${age.toFixed(1)} s ago`;
-        document.getElementById("publisherClient").textContent = data.publisher?.client_id || "-";
-        document.getElementById("publisherDriver").textContent = data.publisher?.driver_name || "-";
-        document.getElementById("fuelSource").textContent = data.fuel?.source || "-";
-        document.getElementById("lapsRemaining").textContent = data.strategy?.laps_remaining ?? "-";
-        document.getElementById("stopsRequired").textContent = data.strategy?.stops_required ?? "-";
-        document.getElementById("tankRange").textContent = data.strategy?.full_tank_laps_est ?? "-";
-        document.getElementById("fuelNextStop").textContent = data.strategy?.fuel_next_stop_l == null ? "-" : `${Number(data.strategy.fuel_next_stop_l).toFixed(1)} L`;
-        document.getElementById("fuelFinalStop").textContent = data.strategy?.fuel_final_stop_l == null ? "-" : `${Number(data.strategy.fuel_final_stop_l).toFixed(1)} L`;
-        document.getElementById("fourTyreDelta").textContent = data.strategy?.four_tyre_delta_s == null ? "-" : `+${Number(data.strategy.four_tyre_delta_s).toFixed(1)} s`;
-        document.getElementById("tyresCovered").textContent = data.strategy?.four_tyres_covered_by_fuel ? "Yes" : "No";
-        document.getElementById("pitLossAvg").textContent = data.pit?.pit_loss_avg_s == null ? "-" : `${Number(data.pit.pit_loss_avg_s).toFixed(1)} s`;
+  <div class="header-grid">
+    <div class="card">
+      <div class="label">Current Driver</div>
+      <div class="big" id="driverName">-</div>
+      <div class="small" id="driverMeta">-</div>
+    </div>
+    <div class="card">
+      <div class="label">Current Lap</div>
+      <div class="big" id="raceLap">-</div>
+      <div class="small" id="raceMeta">-</div>
+    </div>
+    <div class="card">
+      <div class="label">Fuel</div>
+      <div class="big" id="fuelNow">-</div>
+      <div class="small" id="fuelMeta">-</div>
+    </div>
+    <div class="card">
+      <div class="label">Next Stop</div>
+      <div class="big" id="nextStop">-</div>
+      <div class="small" id="stopMeta">-</div>
+    </div>
+    <div class="card">
+      <div class="label">Stops Remaining</div>
+      <div class="big" id="stopsRemainingHeader">-</div>
+      <div class="small">Calculated from current tank range</div>
+    </div>
+    <div class="card">
+      <div class="label">Tyre Call</div>
+      <div class="big" id="tyreCall">-</div>
+      <div class="small" id="tyreCallMeta">-</div>
+    </div>
+  </div>
 
-        const clientsWrap = document.getElementById("clients");
-        clientsWrap.innerHTML = "";
-        (data.connected_clients || []).forEach(c => {
-          const div = document.createElement("div");
-          div.style.border = "1px solid var(--border)";
-          div.style.borderRadius = "12px";
-          div.style.padding = "10px";
-          div.style.marginBottom = "8px";
-          div.innerHTML = `<div><strong>${c.client_id}</strong> ${c.is_active ? "(ACTIVE)" : ""}</div>
-                           <div class="small">Driver: ${c.driver_name || "-"}</div>
-                           <div class="small">Telemetry: ${c.telemetry_status || "-"}</div>
-                           <div class="small">Fuel source: ${c.fuel_source || "-"}</div>
-                           <div class="small">Updated: ${typeof c.age_s === "number" ? c.age_s.toFixed(1) : c.age_s} s ago</div>`;
-          clientsWrap.appendChild(div);
-        });
+  <div class="grid">
+    <div class="card">
+      <div class="section-title">Strategy</div>
 
-        document.getElementById("raw").textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        document.getElementById("statusDot").className = "dot bad";
-        document.getElementById("statusText").textContent = "Disconnected";
-        document.getElementById("raw").textContent = String(err);
-      }
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="label">Laps Left In Tank</div>
+          <div class="value" id="lapsLeftTank">-</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Laps Remaining</div>
+          <div class="value" id="lapsRemaining">-</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Fuel Next Stop</div>
+          <div class="value" id="fuelNextStop">-</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Fuel Final Stop</div>
+          <div class="value" id="fuelFinalStop">-</div>
+        </div>
+      </div>
+
+      <div class="rows" style="margin-top:16px;">
+        <div class="row"><div class="name">Session ID</div><div class="value mono" id="sessionIdCell">-</div></div>
+        <div class="row"><div class="name">Current Tank Range</div><div class="value" id="tankRange">-</div></div>
+        <div class="row"><div class="name">4-Tyre Delta</div><div class="value" id="fourTyreDelta">-</div></div>
+        <div class="row"><div class="name">Tyres Covered By Fuel</div><div class="value" id="tyresCovered">-</div></div>
+        <div class="row"><div class="name">Pit Loss Average</div><div class="value" id="pitLossAvg">-</div></div>
+        <div class="row"><div class="name">Last Stop Lap</div><div class="value" id="lastStopLap">-</div></div>
+        <div class="row"><div class="name">Last Fill Added</div><div class="value" id="lastFillAdded">-</div></div>
+      </div>
+    </div>
+
+    <div class="card map-placeholder">
+      <div>
+        <div class="section-title">Track Context</div>
+        <div class="placeholder-box">
+          <div>
+            <div class="med" style="margin-bottom:8px;">Track map / nearby-car context</div>
+            <div class="small">Reserved panel for live map, nearby rivals and pit rejoin window.</div>
+          </div>
+        </div>
+      </div>
+      <div class="rows">
+        <div class="row"><div class="name">Next Stop</div><div class="value" id="mapNextStop">-</div></div>
+        <div class="row"><div class="name">4-Tyre Delta</div><div class="value" id="mapTyreDelta">-</div></div>
+        <div class="row"><div class="name">Fuel Source</div><div class="value" id="mapFuelSource">-</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subgrid">
+    <div class="card">
+      <div class="section-title">Nearby Race Context</div>
+      <div class="context-list" id="contextList">
+        <div class="context-item">
+          <div class="context-head"><strong>Current Car</strong><span class="small">Placeholder</span></div>
+          <div class="small">Position, class position, gap ahead and gap behind will be shown here once the richer standings feed is connected.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Stint / Fuel Trust</div>
+      <div class="rows">
+        <div class="row"><div class="name">Publisher Client</div><div class="value" id="publisherClient">-</div></div>
+        <div class="row"><div class="name">Publisher Driver</div><div class="value" id="publisherDriver">-</div></div>
+        <div class="row"><div class="name">Fuel Source</div><div class="value" id="fuelSource">-</div></div>
+        <div class="row"><div class="name">Stint Laps</div><div class="value" id="stintLaps">-</div></div>
+        <div class="row"><div class="name">Burn Rate</div><div class="value" id="burnRate">-</div></div>
+        <div class="row"><div class="name">Connected Clients</div><div class="value" id="clientCount">-</div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:18px;">Connected Clients</div>
+      <div class="client-list" id="clients"></div>
+    </div>
+  </div>
+
+  <details>
+    <summary>Raw State</summary>
+    <pre id="raw"></pre>
+  </details>
+</div>
+
+<script>
+  function fmtL(value) {
+    return value == null ? "-" : `${Number(value).toFixed(1)} L`;
+  }
+  function fmtS(value) {
+    return value == null ? "-" : `+${Number(value).toFixed(1)} s`;
+  }
+  function tyreCall(delta, covered) {
+    if (covered) return ["Take 4 tyres", "Covered by fuelling time"];
+    if (delta == null) return ["Unknown", "Insufficient data"];
+    return [`+${Number(delta).toFixed(1)} s`, "4-tyre penalty vs fuel only"];
+  }
+
+  async function refresh() {
+    const parts = window.location.pathname.split("/");
+    const sessionId = decodeURIComponent(parts[parts.length - 1]);
+    const readToken = new URLSearchParams(window.location.search).get("token") || "";
+
+    try {
+      const res = await fetch(`/api/session/${encodeURIComponent(sessionId)}?token=${encodeURIComponent(readToken)}`);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+
+      const age = data.timestamp ? (Date.now()/1000 - data.timestamp) : 9999;
+      const live = age < 5;
+
+      document.getElementById("statusDot").className = "dot " + (live ? "good" : "warn");
+      document.getElementById("statusText").textContent = live ? "Live" : `Stale (${age.toFixed(1)}s)`;
+
+      document.getElementById("title").textContent = `${data.session_id || "Session"} dashboard`;
+      document.getElementById("fuelSourcePill").textContent = data.fuel?.source || "-";
+      document.getElementById("publisherPill").textContent = data.publisher?.client_id || "-";
+
+      document.getElementById("driverName").textContent = data.driver?.name || "-";
+      document.getElementById("driverMeta").textContent = `Stint laps ${data.driver?.stint_laps ?? "-"} | Client ${data.publisher?.client_id || "-"}`;
+      document.getElementById("raceLap").textContent = data.race?.lap ?? "-";
+      document.getElementById("raceMeta").textContent = `Green flag ${data.race?.green_flag_lap ?? "-"} | Total est ${data.race?.laps_total_est ?? "-"}`;
+      document.getElementById("fuelNow").textContent = fmtL(data.fuel?.current_l);
+      document.getElementById("fuelMeta").textContent = `Burn ${data.fuel?.burn_lpl ?? "-"} L/lap | ${data.fuel?.laps_left ?? "-"} laps left`;
+      document.getElementById("nextStop").textContent = data.strategy?.next_stop_lap ?? "-";
+      document.getElementById("stopMeta").textContent = `Updated ${age.toFixed(1)} s ago`;
+      document.getElementById("stopsRemainingHeader").textContent = data.strategy?.stops_required ?? "-";
+
+      const call = tyreCall(data.strategy?.four_tyre_delta_s, data.strategy?.four_tyres_covered_by_fuel);
+      document.getElementById("tyreCall").textContent = call[0];
+      document.getElementById("tyreCallMeta").textContent = call[1];
+
+      document.getElementById("sessionIdCell").textContent = data.session_id || "-";
+      document.getElementById("lapsLeftTank").textContent = data.fuel?.laps_left ?? "-";
+      document.getElementById("lapsRemaining").textContent = data.strategy?.laps_remaining ?? "-";
+      document.getElementById("fuelNextStop").textContent = fmtL(data.strategy?.fuel_next_stop_l);
+      document.getElementById("fuelFinalStop").textContent = fmtL(data.strategy?.fuel_final_stop_l);
+      document.getElementById("tankRange").textContent = data.strategy?.full_tank_laps_est ?? "-";
+      document.getElementById("fourTyreDelta").textContent = fmtS(data.strategy?.four_tyre_delta_s);
+      document.getElementById("tyresCovered").textContent = data.strategy?.four_tyres_covered_by_fuel ? "Yes" : "No";
+      document.getElementById("pitLossAvg").textContent = data.pit?.pit_loss_avg_s == null ? "-" : `${Number(data.pit.pit_loss_avg_s).toFixed(1)} s`;
+      document.getElementById("lastStopLap").textContent = data.pit?.last_stop_lap ?? "-";
+      document.getElementById("lastFillAdded").textContent = fmtL(data.fuel?.last_fill_added_l);
+
+      document.getElementById("mapNextStop").textContent = data.strategy?.next_stop_lap ?? "-";
+      document.getElementById("mapTyreDelta").textContent = fmtS(data.strategy?.four_tyre_delta_s);
+      document.getElementById("mapFuelSource").textContent = data.fuel?.source || "-";
+
+      document.getElementById("publisherClient").textContent = data.publisher?.client_id || "-";
+      document.getElementById("publisherDriver").textContent = data.publisher?.driver_name || "-";
+      document.getElementById("fuelSource").textContent = data.fuel?.source || "-";
+      document.getElementById("stintLaps").textContent = data.driver?.stint_laps ?? "-";
+      document.getElementById("burnRate").textContent = data.fuel?.burn_lpl == null ? "-" : `${Number(data.fuel.burn_lpl).toFixed(3)} L/lap`;
+      document.getElementById("clientCount").textContent = (data.connected_clients || []).length;
+
+      const clientsWrap = document.getElementById("clients");
+      clientsWrap.innerHTML = "";
+      (data.connected_clients || []).forEach(c => {
+        const div = document.createElement("div");
+        div.className = "client-item";
+        div.innerHTML = `
+          <div class="client-head"><strong>${c.client_id}</strong><span class="small">${c.is_active ? "ACTIVE" : "STANDBY"}</span></div>
+          <div class="small">Driver: ${c.driver_name || "-"}</div>
+          <div class="small">Telemetry: ${c.telemetry_status || "-"}</div>
+          <div class="small">Fuel source: ${c.fuel_source || "-"}</div>
+          <div class="small">Updated ${typeof c.age_s === "number" ? c.age_s.toFixed(1) : c.age_s} s ago</div>
+        `;
+        clientsWrap.appendChild(div);
+      });
+
+      document.getElementById("raw").textContent = JSON.stringify(data, null, 2);
+    } catch (err) {
+      document.getElementById("statusDot").className = "dot bad";
+      document.getElementById("statusText").textContent = "Disconnected";
+      document.getElementById("raw").textContent = String(err);
     }
-    refresh();
-    setInterval(refresh, 1000);
-  </script>
+  }
+
+  refresh();
+  setInterval(refresh, 1000);
+</script>
 </body>
 </html>
-"""
-
-def init_db() -> None:
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS latest_state (session_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL, updated_at REAL NOT NULL)")
-    conn.commit()
-    conn.close()
-
-def save_snapshot(session_id: str, payload: Dict[str, Any]) -> None:
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO latest_state (session_id, payload_json, updated_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT(session_id) DO UPDATE SET payload_json=excluded.payload_json, updated_at=excluded.updated_at
-        """,
-        (session_id, json.dumps(payload), time.time()),
-    )
-    conn.commit()
-    conn.close()
-
-def get_required_env(name: str, fallback: str = "") -> str:
-    import os
-    return os.environ.get(name, fallback)
-
-def check_write_token(payload: Dict[str, Any]) -> bool:
-    expected = get_required_env("WRITE_TOKEN", "")
-    if not expected:
-        return True
-    actual = request.headers.get("X-Write-Token") or payload.get("write_token", "")
-    return actual == expected
-
-def check_read_token() -> bool:
-    expected = get_required_env("READ_TOKEN", "")
-    if not expected:
-        return True
-    actual = request.args.get("token", "")
-    return actual == expected
-
-def choose_active_client(session_id: str) -> Optional[str]:
-    session = SESSION_STORE.get(session_id)
-    if not session:
-        return None
-    now = time.time()
-    best_id = None
-    best_score = -999999
-    for client_id, payload in session["clients"].items():
-        publisher = payload.get("publisher", {})
-        fuel = payload.get("fuel", {})
-        ts = float(payload.get("timestamp") or 0)
-        age = now - ts
-        if age > 30:
-            continue
-        score = 0
-        if publisher.get("active_source"): score += 100
-        if publisher.get("telemetry_status") == "live": score += 50
-        if fuel.get("source") == "live": score += 30
-        if age < 3: score += 10
-        score -= int(age)
-        if score > best_score:
-            best_score = score
-            best_id = client_id
-    return best_id
-
-def rebuild_session_state(session_id: str) -> Optional[Dict[str, Any]]:
-    session = SESSION_STORE.get(session_id)
-    if not session:
-        return None
-    active_id = choose_active_client(session_id)
-    session["active_client_id"] = active_id
-    if not active_id:
-        return None
-    active_payload = session["clients"][active_id]
-    merged = dict(active_payload)
-    merged["publisher"] = dict(active_payload.get("publisher", {}))
-    merged["publisher"]["client_id"] = active_id
-    now = time.time()
-    connected = []
-    for client_id, payload in session["clients"].items():
-        age = now - float(payload.get("timestamp") or 0)
-        connected.append({
-            "client_id": client_id,
-            "driver_name": payload.get("publisher", {}).get("driver_name"),
-            "telemetry_status": payload.get("publisher", {}).get("telemetry_status"),
-            "fuel_source": payload.get("fuel", {}).get("source"),
-            "age_s": age,
-            "is_active": client_id == active_id,
-        })
-    merged["connected_clients"] = sorted(connected, key=lambda x: (not x["is_active"], x["age_s"]))
-    session["state"] = merged
-    return merged
-
-@APP.get("/")
-def index() -> Response:
-    return jsonify({"ok": True, "message": "Relay is running", "routes": ["/api/update", "/api/session/<session_id>", "/session/<session_id>"]})
-
-@APP.get("/health")
-def health() -> Response:
-    return jsonify({"ok": True, "server_time": time.time()})
-
-@APP.post("/api/update")
-def api_update() -> Response:
-    payload = request.get_json(silent=True) or {}
-    if not isinstance(payload, dict):
-        return jsonify({"ok": False, "error": "Invalid JSON"}), 400
-    if not check_write_token(payload):
-        return jsonify({"ok": False, "error": "Invalid write token"}), 403
-    session_id = str(payload.get("session_id", "")).strip()
-    client_id = str(payload.get("publisher", {}).get("client_id", "")).strip()
-    if not session_id:
-        return jsonify({"ok": False, "error": "Missing session_id"}), 400
-    if not client_id:
-        return jsonify({"ok": False, "error": "Missing publisher.client_id"}), 400
-
-    payload["timestamp"] = float(payload.get("timestamp") or time.time())
-    with SESSION_LOCK:
-        if session_id not in SESSION_STORE:
-            SESSION_STORE[session_id] = {"clients": {}, "active_client_id": None, "state": {}}
-        SESSION_STORE[session_id]["clients"][client_id] = payload
-        merged = rebuild_session_state(session_id)
-        if merged:
-            save_snapshot(session_id, merged)
-
-    return jsonify({"ok": True, "session_id": session_id, "active_client_id": SESSION_STORE[session_id]["active_client_id"]})
-
-@APP.get("/api/session/<session_id>")
-def api_session(session_id: str) -> Response:
-    if not check_read_token():
-        return jsonify({"ok": False, "error": "Invalid read token"}), 403
-    with SESSION_LOCK:
-        payload = SESSION_STORE.get(session_id, {}).get("state")
-    if not payload:
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        cur.execute("SELECT payload_json FROM latest_state WHERE session_id = ?", (session_id,))
-        row = cur.fetchone()
-        conn.close()
-        if row:
-            payload = json.loads(row[0])
-    if not payload:
-        return jsonify({"ok": False, "error": "Session not found"}), 404
-    return jsonify(payload)
-
-@APP.get("/session/<session_id>")
-def session_dashboard(session_id: str) -> str:
-    return render_template_string(DASHBOARD_HTML)
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--db", default="relay_store.sqlite3")
-    args = parser.parse_args()
-    global DB_PATH
-    DB_PATH = args.db
-    init_db()
-    APP.run(host=args.host, port=args.port, debug=False, use_reloader=False)
-    return 0
-
-if __name__ == "__main__":
-    raise SystemExit(main())
