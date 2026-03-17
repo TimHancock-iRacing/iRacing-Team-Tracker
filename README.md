@@ -1,10 +1,30 @@
-# Dashboard v3 Pack
+# Pit Logic v1 Test Pack
 
-Included:
-- relay_server.py — cleaner race-engineer front end using existing API/state
-- DASHBOARD_V3_SPEC.md — layout and information hierarchy spec
+This pack adds:
+- lap-by-lap burn recalculation
+- rolling/stint/fallback burn model
+- live tank-range recalculation
+- pit recommendation v1
+- 4-tyre delta vs fuel-only
+- tyre heatmap panel
+- same filenames for easier drop-in replacement
 
-This front end keeps the same server-side filenames so it can drop into your existing workflow.
+Files:
+- relay_server.py
+- tracker_publisher.py
+- config.example.json
+- requirements.txt
+- README.md
 
-Railway start command:
+## Test locally
+1. Replace your local files with these.
+2. Run the publisher in mock mode:
+   py tracker_publisher.py --config config.example.json
+3. Watch:
+   - burn model update lap by lap
+   - next stop / fuel next stop recalc
+   - tyre heatmap degrade then reset on pit laps
+
+## Railway
+Keep start command:
 python relay_server.py --host 0.0.0.0 --port $PORT

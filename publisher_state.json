@@ -1,6 +1,6 @@
 {
   "session_id": "osr-b12-2026",
-  "timestamp": 1773744807.130734,
+  "timestamp": 1773746058.8517575,
   "publisher": {
     "client_id": "tim-pc",
     "client_label": "Tim Main PC",
@@ -9,33 +9,33 @@
     "active_source": true
   },
   "race": {
-    "lap": 64,
+    "lap": 51,
     "laps_total_est": 291,
     "green_flag_lap": 4
   },
   "driver": {
     "name": "Tim Hancock",
-    "stint_laps": 61
+    "stint_laps": 48
   },
   "fuel": {
-    "current_l": 89.2,
+    "current_l": 50.2,
     "burn_lpl": 2.6,
-    "laps_left": 33.15,
+    "laps_left": 18.15,
     "source": "live",
     "last_fill_added_l": 80.0
   },
   "pit": {
     "state": "track",
-    "last_stop_lap": 56,
+    "last_stop_lap": 28,
     "pit_loss_avg_s": 65.0
   },
   "strategy": {
-    "laps_remaining": 227,
-    "stops_required": 5,
-    "next_stop_lap": 97,
+    "laps_remaining": 240,
+    "stops_required": 6,
+    "next_stop_lap": 69,
     "full_tank_laps_est": 41,
     "fuel_next_stop_l": 109.6,
-    "fuel_final_stop_l": 81.0,
+    "fuel_final_stop_l": 47.2,
     "four_tyre_delta_s": 0.0,
     "four_tyres_covered_by_fuel": true,
     "pit_loss_avg_s": 65.0

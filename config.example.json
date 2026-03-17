@@ -29,9 +29,11 @@
     "four_tyre_service_s": 24.0
   },
   "mock": {
+    "driver_name": "Tim Hancock",
     "start_lap": 4,
     "start_fuel_l": 96.0,
     "burn_lpl": 2.6,
+    "stint_laps": 0,
     "pit_every_laps": 28
   }
 }
